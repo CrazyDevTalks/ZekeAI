@@ -18,7 +18,7 @@ const ResponsiveVoiceScript = () => {
       });
 
       const script = document.createElement('script');
-      script.src = `https://code.responsivevoice.org/responsivevoice.js?key=${NEXT_PUBLIC_RESPONSIVE_VOICE_KEY}`;
+      script.src = `https://code.responsivevoice.org/responsivevoice.js?key=${process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_KEY}`;
       script.async = true;
       script.onload = () => {
         console.log("ResponsiveVoice script loaded");
