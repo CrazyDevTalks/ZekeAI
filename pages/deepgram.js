@@ -236,15 +236,38 @@ export default function Deepgram() {
     };
 
     const handleMicrophoneToggle = async () => {
-        if (!isListening) {
-            // Check if we already have permission
-            const permissions = await navigator.permissions.query({ name: 'microphone' });
-            if (permissions.state === 'denied') {
-                setPermissionError(true);
-                return;
+        try {
+            if (!isListening) {
+                // Use getUserMedia directly instead of permissions.query
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                
+                // If we got the stream, stop it since we just wanted to check permissions
+                stream.getTracks().forEach(track => track.stop());
             }
+            
+            setIsListening(!isListening);
+            setPermissionError(false); // Clear any previous errors
+            
+        } catch (error) {
+            console.error('Microphone error:', error);
+            
+            // Handle specific error cases
+            if (error.name === 'NotAllowedError') {
+                setPermissionError(true);
+            } else if (error.name === 'NotFoundError') {
+                setError('No microphone found. Please connect a microphone and try again.');
+            } else {
+                setError('Failed to access microphone. Please check your device settings.');
+            }
+            
+            setIsListening(false);
         }
-        setIsListening(!isListening);
     };
 
     const handlePermissionDenied = () => {
@@ -375,9 +398,35 @@ export default function Deepgram() {
                 {permissionError && (
                     <div className="fixed top-4 right-4 p-4 bg-red-500/90 backdrop-blur-md 
                     text-white rounded-lg shadow-lg border border-red-400 max-w-sm">
-                        Microphone access denied. Please enable microphone access in your browser settings.
+                        <div className="flex justify-between items-start">
+                            <div>
+                                Microphone access denied. Please enable microphone access in your browser settings.
+                            </div>
+                            <button 
+                                onClick={() => setPermissionError(false)}
+                                className="ml-2 text-white/80 hover:text-white"
+                            >
+                                ✕
+                            </button>
+                        </div>
                     </div>
                 )}
+
+                {error && !permissionError && (
+                    <div className="fixed top-4 right-4 p-4 bg-red-500/90 backdrop-blur-md 
+                    text-white rounded-lg shadow-lg border border-red-400 max-w-sm">
+                        <div className="flex justify-between items-start">
+                            <div>{error}</div>
+                            <button 
+                                onClick={() => setError(null)}
+                                className="ml-2 text-white/80 hover:text-white"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <DeepgramTranscription
                     isListening={isListening}
                     onTranscriptionUpdate={handleTranscriptionUpdate}
