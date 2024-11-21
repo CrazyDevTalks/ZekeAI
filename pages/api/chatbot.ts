@@ -2,8 +2,8 @@
 // import type { NextRequest } from 'next/server';
 // import { OpenAIStream, OpenAIStreamEvent } from '../../lib/openAIStream';
 
-// if (!process.env.OPENAI_API_KEY)
-//   throw new Error('OPENAI_API_KEY is not defined');
+// if (!process.env.NEXT_OPENAI_API_KEY )
+//   throw new Error('NEXT_OPENAI_API_KEY  is not defined');
 
 // export const config = {
 //   runtime: 'edge',
