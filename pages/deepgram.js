@@ -2,6 +2,7 @@ import { Suspense, useState, useRef, useEffect } from "react";
 import DeepgramTranscription from "../components/Transcription";
 import ResponsiveVoiceScript from "../components/ResponsiveVoiceScript";
 import { LanguageSelect } from "../components/LanguageSelect";
+import { useTextToSpeech } from "../hooks/useTextToSpeech";
 
 export default function Deepgram() {
     const [isListening, setIsListening] = useState(false);
@@ -16,7 +17,7 @@ export default function Deepgram() {
     const lastTranslatedText = useRef("");
     const [isPlayingAudio, setIsPlayingAudio] = useState(false);
     const [error, setError] = useState(null);
-    const [isResponsiveVoiceReady, setIsResponsiveVoiceReady] = useState(false);
+    const { speak, cancel, isReady } = useTextToSpeech();
     const audioContext = useRef(null);
     const lastPlayedTranslation = useRef("");
     const pendingTranslation = useRef("");
@@ -177,14 +178,15 @@ export default function Deepgram() {
     };
 
     const handlePlayTranslation = async (text, targetLanguage) => {
-        // Don't play if it's the same text we just played
-        if (text === lastPlayedTranslation.current) {
-            console.log("Skipping duplicate translation playback");
+        if (!isReady) {
+            console.log("Waiting for ResponsiveVoice to be ready...");
+            // Optional: You could add a retry mechanism here
             return;
         }
 
-        if (!isResponsiveVoiceReady || !window.responsiveVoice) {
-            console.error("ResponsiveVoice not ready");
+        // Don't play if it's the same text we just played
+        if (text === lastPlayedTranslation.current) {
+            console.log("Skipping duplicate translation playback");
             return;
         }
 
@@ -204,17 +206,13 @@ export default function Deepgram() {
                 await audioContext.current.resume();
             }
 
-            if (window.responsiveVoice.isPlaying()) {
-                window.responsiveVoice.cancel();
-            }
+            // Cancel any ongoing speech
+            cancel();
 
             lastPlayedTranslation.current = text;
+            setIsPlayingAudio(true);
 
-            window.responsiveVoice.speak(text, voice, {
-                onstart: () => {
-                    console.log("Playback started");
-                    setIsPlayingAudio(true);
-                },
+            speak(text, voice, {
                 onend: () => {
                     console.log("Playback completed");
                     setIsPlayingAudio(false);
@@ -254,6 +252,13 @@ export default function Deepgram() {
         setIsListening(false);
     };
 
+    useEffect(() => {
+        // Initialize audio context
+        if (!audioContext.current) {
+            audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }, []);
+
     return (
         <Suspense
             fallback={
@@ -263,6 +268,7 @@ export default function Deepgram() {
             }
         >
             <div className="min-h-screen bg-gradient-to-b p-4">
+                <ResponsiveVoiceScript />
                 {/* Top Controls */}
                 <div className="w-full max-w-6xl mx-auto mb-8">
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -378,8 +384,6 @@ export default function Deepgram() {
                     onPermissionDenied={handlePermissionDenied}
                     language={deepgramLanguages[sourceLanguage]}
                 />
-
-                <ResponsiveVoiceScript />
             </div>
         </Suspense>
     );
